@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
-type Conducts struct {
+type Contact struct {
 	ID         string   `json:"id,omitempty"`
 	FirstName  string   `json:"firstname,omitempty"`
 	SecondName string   `json:"secondname,omitempty"`
@@ -20,55 +21,69 @@ type Address struct {
 	Street string `json:"street,omitempty"`
 }
 
-var cond []Conducts
+var conts []Contact
 
 func main() {
 	myRouter := mux.NewRouter()
-	cond = append(cond, Conducts{ID: "1", FirstName: "Cetric", SecondName: "Okola",
+	conts = append(conts, Contact{ID: "1", FirstName: "Cetric", SecondName: "Okola",
 		Address: &Address{City: "Nairobi", Street: "Tom Mboya"}})
-	cond = append(cond, Conducts{ID: "2", FirstName: "Elvis", SecondName: "Mutende",
+	conts = append(conts, Contact{ID: "2", FirstName: "Elvis", SecondName: "Mutende",
 		Address: &Address{City: "Kisumu", Street: "Raila"}})
 
-	myRouter.HandleFunc("/cond", GetConducts).Methods("GET")
-	myRouter.HandleFunc("/cond/{ID}", GetConduct).Methods("GET")
-	myRouter.HandleFunc("/cond/{ID}", CreateConduct).Methods("POST")
-	myRouter.HandleFunc("/cond/{ID}", DeleteConduct).Methods("DELETE")
+	fmt.Println(len(conts))
+
+	myRouter.HandleFunc("/conts", GetContacts).Methods("GET")
+	myRouter.HandleFunc("/conts/{ID}", GetContact).Methods("GET")
+	myRouter.HandleFunc("/conts/{ID}", CreateContact).Methods("POST")
+	myRouter.HandleFunc("/conts/{ID}", DeleteContact).Methods("DELETE")
 	log.Fatal(http.ListenAndServe(":8080", myRouter))
 }
 
-func GetConducts(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(cond)
+func GetContacts(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(conts)
 
 }
-func GetConduct(w http.ResponseWriter, r *http.Request) {
+func GetContact(w http.ResponseWriter, r *http.Request) {
+
 	param := mux.Vars(r)
-	for _, item := range cond {
+	for _, item := range conts {
 		if item.ID == param["ID"] {
-			json.NewEncoder(w).Encode(cond)
+			json.NewEncoder(w).Encode(item)
 			return
 		}
 	}
-	json.NewEncoder(w).Encode(&Conducts{})
+
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte("404 - Contact Not Found"))
 
 }
 
-func CreateConduct(w http.ResponseWriter, r *http.Request) {
+// CreateContact ...
+func CreateContact(w http.ResponseWriter, r *http.Request) {
 	param := mux.Vars(r)
-	var con Conducts
-	_ = json.NewDecoder(r.Body).Decode(&cond)
+	var con Contact
+	
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
+	err := json.NewDecoder(r.Body).Decode(&con) //send json data to the server
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 	con.ID = param["id"]
-	cond = append(cond, con)
-	json.NewEncoder(w).Encode(cond)
+	conts = append(conts, con)
+	json.NewEncoder(w).Encode(conts) //write json to the server
 }
 
-func DeleteConduct(w http.ResponseWriter, r *http.Request) {
+func DeleteContact(w http.ResponseWriter, r *http.Request) {
 	param := mux.Vars(r)
-	for index, item := range cond {
+	for index, item := range conts {
 		if item.ID == param["id"] {
-			cond = append(cond[:index], cond[index+1:]...) //deletes a given conduct
+			conts = append(conts[:index], conts[index+1:]...) //deletes a given conduct
 			break
 		}
-		json.NewEncoder(w).Encode(cond)
 	}
-
+	json.NewEncoder(w).Encode(conts)
 }
